@@ -18,34 +18,65 @@ static irq_handler_t  cht_power_button_irq_handler(unsigned int irq, void *dev_i
 
 static int __init cht_power_button_init(void)
 {
-	int result = 0;
+	int err;
 	printk(KERN_INFO "CHT_POWER_BUTTON: Initializing module\n");
-	button_dev = input_allocate_device();
-	if (!button_dev)
+	if(!(button_dev = input_allocate_device()))
 	{
-		printk(KERN_ERR "CHT_POWER_BUTTON: Not enough memory\n");
-		return result;
-	}
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to allocate virtual input device\n");
+		return -ENOMEM;
+	};
 	button_dev->name="GPIO_PWRBTN";
 	button_dev->evbit[0] = BIT_MASK(EV_KEY);
 	input_set_capability(button_dev, EV_KEY, KEY_POWER);
-	if (input_register_device(button_dev))
+	if((err = input_register_device(button_dev)))
 	{
-		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to register virtual input\n");
-	}
-	gpio_request_one(GPIO_CHT_PWRBTN, GPIOF_DIR_IN | GPIOF_ACTIVE_LOW, "sysfs");
-	gpio_set_debounce(GPIO_CHT_PWRBTN, 200);
-	gpio_export(GPIO_CHT_PWRBTN, false);
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to register virtual input device\n");
+		input_free_device(button_dev);
+		return err;
+	};
+	if((err = gpio_request_one(GPIO_CHT_PWRBTN, GPIOF_DIR_IN | GPIOF_ACTIVE_LOW, "sysfs")))
+	{
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to request GPIO pin number %d\n", GPIO_CHT_PWRBTN);
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		return err;
+	};
+	if((err = gpio_export(GPIO_CHT_PWRBTN, false)))
+	{
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to export GPIO pin number %d\n", GPIO_CHT_PWRBTN);
+		gpio_free(GPIO_CHT_PWRBTN);
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		return err;
+	};
 	irqNumber = gpio_to_irq(GPIO_CHT_PWRBTN);
-	result = request_threaded_irq(
-		irqNumber,
-		(irq_handler_t) cht_power_button_irq_handler,
-		NULL,
-		(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING),
-		"CHT_POWER_BUTTON",
-		button_dev
+	if(!irqNumber)
+	{
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to get IRQ for GPIO pin number %d\n", GPIO_CHT_PWRBTN);
+		gpio_unexport(GPIO_CHT_PWRBTN);
+		gpio_free(GPIO_CHT_PWRBTN);
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		return irqNumber;
+	};
+	err = request_threaded_irq(
+			irqNumber,
+			(irq_handler_t) cht_power_button_irq_handler,
+			NULL,
+			(IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING),
+			"CHT_POWER_BUTTON",
+			button_dev
 	);
-	return result;
+	if(err)
+	{
+		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to setup handler on IRQ %d\n", irqNumber);
+		gpio_unexport(GPIO_CHT_PWRBTN);
+		gpio_free(GPIO_CHT_PWRBTN);
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		return err;
+	};
+	return 0;
 }
 
 static void __exit cht_power_button_exit(void)
