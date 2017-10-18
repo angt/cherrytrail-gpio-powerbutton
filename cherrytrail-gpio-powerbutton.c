@@ -44,6 +44,8 @@ static int __init cht_power_button_init(void)
 	if(!(button_dev = input_allocate_device()))
 	{
 		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to allocate virtual input device\n");
+		gpio_unexport(GPIO_CHT_PWRBTN);
+		gpio_free(GPIO_CHT_PWRBTN);
 		return -ENOMEM;
 	};
 	button_dev->name="GPIO_PWRBTN";
