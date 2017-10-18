@@ -81,9 +81,12 @@ static int __init cht_power_button_init(void)
 
 static void __exit cht_power_button_exit(void)
 {
-	input_unregister_device(button_dev);
-	input_free_device(button_dev);
-	free_irq(irqNumber, button_dev);
+	if (button_dev) {
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		free_irq(irqNumber, button_dev);
+		button_dev = NULL;
+	}
 	gpio_unexport(GPIO_CHT_PWRBTN);
 	gpio_free(GPIO_CHT_PWRBTN);
 }
