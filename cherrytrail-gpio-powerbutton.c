@@ -38,12 +38,14 @@ static int __init cht_power_button_init(void)
 		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to get IRQ for GPIO pin number %d\n", GPIO_CHT_PWRBTN);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
-		return irqNumber;
+		return -EINVAL;
 	};
 	// Initialize virtual input device
 	if(!(button_dev = input_allocate_device()))
 	{
 		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to allocate virtual input device\n");
+		gpio_unexport(GPIO_CHT_PWRBTN);
+		gpio_free(GPIO_CHT_PWRBTN);
 		return -ENOMEM;
 	};
 	button_dev->name="GPIO_PWRBTN";
@@ -64,6 +66,7 @@ static int __init cht_power_button_init(void)
 		input_free_device(button_dev);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
+		button_dev = NULL;
 		return err;
 	};
 	// Register virtual input device
@@ -74,6 +77,7 @@ static int __init cht_power_button_init(void)
 		free_irq(irqNumber, button_dev);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
+		button_dev = NULL;
 		return err;
 	};
 	return 0;
@@ -81,9 +85,12 @@ static int __init cht_power_button_init(void)
 
 static void __exit cht_power_button_exit(void)
 {
-	input_unregister_device(button_dev);
-	input_free_device(button_dev);
-	free_irq(irqNumber, button_dev);
+	if (button_dev) {
+		input_unregister_device(button_dev);
+		input_free_device(button_dev);
+		free_irq(irqNumber, button_dev);
+		button_dev = NULL;
+	}
 	gpio_unexport(GPIO_CHT_PWRBTN);
 	gpio_free(GPIO_CHT_PWRBTN);
 }
