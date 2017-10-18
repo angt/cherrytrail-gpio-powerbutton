@@ -38,7 +38,7 @@ static int __init cht_power_button_init(void)
 		printk(KERN_ERR "CHT_POWER_BUTTON: Failed to get IRQ for GPIO pin number %d\n", GPIO_CHT_PWRBTN);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
-		return irqNumber;
+		return -EINVAL;
 	};
 	// Initialize virtual input device
 	if(!(button_dev = input_allocate_device()))
