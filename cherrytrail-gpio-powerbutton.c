@@ -66,6 +66,7 @@ static int __init cht_power_button_init(void)
 		input_free_device(button_dev);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
+		button_dev = NULL;
 		return err;
 	};
 	// Register virtual input device
@@ -76,6 +77,7 @@ static int __init cht_power_button_init(void)
 		free_irq(irqNumber, button_dev);
 		gpio_unexport(GPIO_CHT_PWRBTN);
 		gpio_free(GPIO_CHT_PWRBTN);
+		button_dev = NULL;
 		return err;
 	};
 	return 0;
