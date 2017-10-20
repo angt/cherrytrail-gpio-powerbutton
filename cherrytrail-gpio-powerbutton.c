@@ -4,6 +4,7 @@
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/input.h>
+#include <linux/acpi.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("DUPONCHEEL Sébastien");
@@ -103,6 +104,13 @@ static irq_handler_t cht_power_button_irq_handler(unsigned int irq, void *dev_id
 	input_sync(button_dev);
 	return (irq_handler_t) IRQ_HANDLED;
 }
+
+static const struct acpi_device_id cht_acpi_match[] = {
+	{ "INT33FF" },
+	{ }
+};
+
+MODULE_DEVICE_TABLE(acpi, cht_acpi_match);
 
 module_init(cht_power_button_init);
 module_exit(cht_power_button_exit);
